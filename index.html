@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Car Wash Booking</title>
+<style>
+:root{--bg:#f4f8fb;--card:#fff;--text:#12212e;--muted:#5b6b78;--accent:#0a7cff;--border:#d9e3ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1620;--card:#17222e;--text:#e8eff5;--muted:#9fb0bf;--accent:#4aa3ff;--border:#2a3a49}}
+:root[data-theme="dark"]{--bg:#0e1620;--card:#17222e;--text:#e8eff5;--muted:#9fb0bf;--accent:#4aa3ff;--border:#2a3a49}
+html{color-scheme:light dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+h1{margin:8px 0 2px;font-size:26px}
+.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 12px}
+.svc{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer}
+.svc input{margin-right:10px}
+.svc.sel{border-color:var(--accent);outline:1px solid var(--accent)}
+.svc small{display:block;color:var(--muted)}
+.price{font-weight:600;white-space:nowrap}
+label{display:block;font-size:14px;margin:10px 0 4px;color:var(--muted)}
+input[type=text],input[type=date],input[type=time],select{width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:16px}
+.total{display:flex;justify-content:space-between;font-size:18px;font-weight:600;margin-top:6px}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:17px;font-weight:600;cursor:pointer}
+.err{color:#d93025;font-size:14px;margin:8px 0 0;min-height:1em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="shop"></h1>
+  <p class="sub">Book your wash in under a minute.</p>
+
+  <div class="card">
+    <h2>1. Choose a service</h2>
+    <div id="services"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Vehicle</h2>
+    <select id="vehicle"></select>
+  </div>
+
+  <div class="card">
+    <h2>3. Date, time and your details</h2>
+    <label for="date">Date</label><input type="date" id="date">
+    <label for="time">Time</label><input type="time" id="time">
+    <label for="name">Your name</label><input type="text" id="name" placeholder="Name">
+    <label for="plate">Vehicle number (optional)</label><input type="text" id="plate" placeholder="e.g. AS01 AB 1234">
+  </div>
+
+  <div class="card">
+    <div class="total"><span>Total</span><span id="total">₹0</span></div>
+    <p class="err" id="err"></p>
+    <button id="send">Send booking on WhatsApp</button>
+  </div>
+</div>
+
+<script>
+// ====== EDIT THESE ======
+var SHOP_NAME = "Astro Car Wash";
+var WHATSAPP_NUMBER = "919362194697"; // country code + number, no + or spaces
+var CURRENCY = "₹";
+// prices: [4 wheeler, 2 wheeler]
+var SERVICES = [
+  {name: "Basic Wash", desc: "Exterior wash", prices: [200, 100]},
+  {name: "Complete Wash & Service", desc: "Full wash and service", prices: [400, 200]},
+  {name: "Monthly Membership", desc: "4 free washes in 1 month", prices: [799, 799]}
+];
+var VEHICLES = [
+  {name: "4 Wheeler"},
+  {name: "2 Wheeler"}
+];
+// ========================
+
+document.getElementById("shop").textContent = SHOP_NAME;
+document.title = SHOP_NAME + " Booking";
+var selected = 0;
+var svcBox = document.getElementById("services");
+var vSel = document.getElementById("vehicle");
+
+SERVICES.forEach(function(s, i){
+  var l = document.createElement("label");
+  l.className = "svc" + (i === 0 ? " sel" : "");
+  l.style.margin = "0 0 8px";
+  l.style.color = "inherit";
+  l.innerHTML = '<span><input type="radio" name="svc"' + (i === 0 ? " checked" : "") + '><b>' + s.name + '</b><small>' + s.desc + '</small></span><span class="price" id="p' + i + '"></span>';
+  l.addEventListener("click", function(){
+    selected = i;
+    document.querySelectorAll(".svc").forEach(function(e, j){ e.classList.toggle("sel", j === i); });
+    l.querySelector("input").checked = true;
+    update();
+  });
+  svcBox.appendChild(l);
+});
+VEHICLES.forEach(function(v, i){
+  var o = document.createElement("option");
+  o.value = i; o.textContent = v.name;
+  vSel.appendChild(o);
+});
+vSel.addEventListener("change", update);
+
+var d = new Date();
+var today = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+document.getElementById("date").min = today;
+document.getElementById("date").value = today;
+
+function total(){
+  return SERVICES[selected].prices[vSel.value];
+}
+function update(){
+  SERVICES.forEach(function(s, i){
+    document.getElementById("p" + i).textContent = CURRENCY + s.prices[vSel.value];
+  });
+  document.getElementById("total").textContent = CURRENCY + total();
+}
+update();
+
+document.getElementById("send").addEventListener("click", function(){
+  var name = document.getElementById("name").value.trim();
+  var date = document.getElementById("date").value;
+  var time = document.getElementById("time").value;
+  var plate = document.getElementById("plate").value.trim();
+  var err = document.getElementById("err");
+  if (!name || !date || !time){ err.textContent = "Please enter your name, date and time."; return; }
+  err.textContent = "";
+  var msg = "New car wash booking\n" +
+    "Name: " + name + "\n" +
+    "Service: " + SERVICES[selected].name + "\n" +
+    "Vehicle: " + VEHICLES[vSel.value].name + (plate ? " (" + plate + ")" : "") + "\n" +
+    "Date: " + date + "\n" +
+    "Time: " + time + "\n" +
+    "Total: " + CURRENCY + total();
+  window.open("https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg), "_blank");
+});
+</script>
+</body>
+</html>
